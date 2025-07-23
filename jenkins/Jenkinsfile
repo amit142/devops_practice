@@ -1,0 +1,83 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_REGISTRY = 'your-registry.com'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Build User Service') {
+            steps {
+                dir('user-service') {
+                    sh 'npm install'
+                    sh 'npm test || true'
+                    sh "docker build -t ${DOCKER_REGISTRY}/user-service:${IMAGE_TAG} ."
+                }
+            }
+        }
+        
+        stage('Build Product Service') {
+            steps {
+                dir('product-service') {
+                    sh 'pip install -r requirements.txt'
+                    sh "docker build -t ${DOCKER_REGISTRY}/product-service:${IMAGE_TAG} ."
+                }
+            }
+        }
+        
+        stage('Build Order Service') {
+            steps {
+                dir('order-service') {
+                    sh 'mvn clean test'
+                    sh "docker build -t ${DOCKER_REGISTRY}/order-service:${IMAGE_TAG} ."
+                }
+            }
+        }
+        
+        stage('Integration Tests') {
+            steps {
+                sh 'chmod +x test-services.sh'
+                sh './test-services.sh'
+            }
+        }
+        
+        stage('Push Images') {
+            steps {
+                sh "docker push ${DOCKER_REGISTRY}/user-service:${IMAGE_TAG}"
+                sh "docker push ${DOCKER_REGISTRY}/product-service:${IMAGE_TAG}"
+                sh "docker push ${DOCKER_REGISTRY}/order-service:${IMAGE_TAG}"
+            }
+        }
+        
+        stage('Deploy to OpenShift') {
+            steps {
+                script {
+                    sh "sed -i 's|image: user-service:latest|image: ${DOCKER_REGISTRY}/user-service:${IMAGE_TAG}|g' k8s/user-service.yaml"
+                    sh "sed -i 's|image: product-service:latest|image: ${DOCKER_REGISTRY}/product-service:${IMAGE_TAG}|g' k8s/product-service.yaml"
+                    sh "sed -i 's|image: order-service:latest|image: ${DOCKER_REGISTRY}/order-service:${IMAGE_TAG}|g' k8s/order-service.yaml"
+                    
+                    sh 'oc apply -f k8s/'
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            sh 'docker system prune -f'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}

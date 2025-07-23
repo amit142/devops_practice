@@ -1,0 +1,23 @@
+nohup: ignoring input
+
+> user-service@1.0.0 start
+> node server.js
+
+User Service running on port 3001
+Health check: http://localhost:3001/health
+Available endpoints:
+  GET    /users
+  GET    /users/:id
+  POST   /register
+  POST   /auth/login
+GET /users - Fetching all users
+GET /users/1 - Fetching user by ID
+POST /register - Registering new user: { username: 'testuser', email: 'test@example.com' }
+POST /auth/login - User login attempt: { username: 'testuser', email: undefined }
+GET /users/1 - Fetching user by ID
+GET /users - Fetching all users
+GET /users - Fetching all users
+GET /users - Fetching all users
+GET /users - Fetching all users
+GET /users - Fetching all users
+GET /users - Fetching all users
