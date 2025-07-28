@@ -128,58 +128,58 @@ else
     print_error "Failed to deploy Web UI"
 fi
 
-# Step 4: Deploy ingress (optional)
-echo
-print_info "Step 4: Deploying Ingress (optional)..."
-kubectl apply -f k8s/ingress.yaml -n ecommerce
-if [ $? -eq 0 ]; then
-    print_status "Ingress deployed successfully"
-else
-    print_warning "Ingress deployment failed (this is optional if you don't have ingress controller)"
-fi
+# # Step 4: Deploy ingress (optional)
+# echo
+# print_info "Step 4: Deploying Ingress (optional)..."
+# kubectl apply -f k8s/ingress.yaml -n ecommerce
+# if [ $? -eq 0 ]; then
+#     print_status "Ingress deployed successfully"
+# else
+#     print_warning "Ingress deployment failed (this is optional if you don't have ingress controller)"
+# fi
 
-# Step 5: Wait for deployments
-echo
-print_info "Step 5: Waiting for deployments to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/user-service -n ecommerce
-kubectl wait --for=condition=available --timeout=300s deployment/product-service -n ecommerce
-kubectl wait --for=condition=available --timeout=300s deployment/order-service -n ecommerce
-kubectl wait --for=condition=available --timeout=300s deployment/web-ui -n ecommerce
+# # Step 5: Wait for deployments
+# echo
+# print_info "Step 5: Waiting for deployments to be ready..."
+# kubectl wait --for=condition=available --timeout=300s deployment/user-service -n ecommerce
+# kubectl wait --for=condition=available --timeout=300s deployment/product-service -n ecommerce
+# kubectl wait --for=condition=available --timeout=300s deployment/order-service -n ecommerce
+# kubectl wait --for=condition=available --timeout=300s deployment/web-ui -n ecommerce
 
-# Step 6: Show deployment status
-echo
-print_info "Step 6: Deployment Status"
-echo "=========================="
-kubectl get pods -n ecommerce
-echo
-kubectl get services -n ecommerce
-echo
-kubectl get ingress -n ecommerce
+# # Step 6: Show deployment status
+# echo
+# print_info "Step 6: Deployment Status"
+# echo "=========================="
+# kubectl get pods -n ecommerce
+# echo
+# kubectl get services -n ecommerce
+# echo
+# kubectl get ingress -n ecommerce
 
-# Step 7: Access information
-echo
-print_info "🎉 Deployment Complete!"
-echo "======================="
-print_info "Access your application:"
-echo
-print_info "Via NodePort (if using minikube/kind):"
-echo "  Web UI: http://localhost:30800"
-echo
-print_info "Via Port Forward:"
-echo "  kubectl port-forward svc/web-ui 8000:8000 -n ecommerce"
-echo "  Then access: http://localhost:8000"
-echo
-print_info "Via Ingress (if configured):"
-echo "  Add '127.0.0.1 ecommerce.local' to /etc/hosts"
-echo "  Then access: http://ecommerce.local"
-echo
-print_info "To check logs:"
-echo "  kubectl logs -f deployment/user-service -n ecommerce"
-echo "  kubectl logs -f deployment/product-service -n ecommerce"
-echo "  kubectl logs -f deployment/order-service -n ecommerce"
-echo "  kubectl logs -f deployment/web-ui -n ecommerce"
-echo
-print_info "To scale services:"
-echo "  kubectl scale deployment user-service --replicas=3 -n ecommerce"
-echo
-print_status "Happy coding! 🚀"
+# # Step 7: Access information
+# echo
+# print_info "🎉 Deployment Complete!"
+# echo "======================="
+# print_info "Access your application:"
+# echo
+# print_info "Via NodePort (if using minikube/kind):"
+# echo "  Web UI: http://localhost:30800"
+# echo
+# print_info "Via Port Forward:"
+# echo "  kubectl port-forward svc/web-ui 8000:8000 -n ecommerce"
+# echo "  Then access: http://localhost:8000"
+# echo
+# print_info "Via Ingress (if configured):"
+# echo "  Add '127.0.0.1 ecommerce.local' to /etc/hosts"
+# echo "  Then access: http://ecommerce.local"
+# echo
+# print_info "To check logs:"
+# echo "  kubectl logs -f deployment/user-service -n ecommerce"
+# echo "  kubectl logs -f deployment/product-service -n ecommerce"
+# echo "  kubectl logs -f deployment/order-service -n ecommerce"
+# echo "  kubectl logs -f deployment/web-ui -n ecommerce"
+# echo
+# print_info "To scale services:"
+# echo "  kubectl scale deployment user-service --replicas=3 -n ecommerce"
+# echo
+# print_status "Happy coding! 🚀"

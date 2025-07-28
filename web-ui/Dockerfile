@@ -1,25 +1,29 @@
-FROM python:3.10-alpine
+# Use nginx for better performance and smaller image
+FROM nginx:alpine
 
-# Set working directory
-WORKDIR /app
+# Copy web files to nginx html directory
+COPY index.html script.js style.css /usr/share/nginx/html/
 
-# Copy web files
-COPY . .
+# Create custom nginx config for SPA
+RUN echo 'server { \
+    listen 8000; \
+    server_name localhost; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    location /health { \
+        access_log off; \
+        return 200 "healthy\n"; \
+        add_header Content-Type text/plain; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
-# Create non-root user
-RUN addgroup -g 1001 -S webuser && \
-    adduser -S webuser -u 1001 -G webuser
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf.bak 2>/dev/null || true
 
-# Change ownership
-RUN chown -R webuser:webuser /app
-USER webuser
-
-# Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000')" || exit 1
-
-# Start the web server
-CMD ["python3", "-m", "http.server", "8000"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

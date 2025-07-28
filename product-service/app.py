@@ -7,6 +7,9 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
+# Initialize start time
+start_time = time.time()
+
 # Mock product data
 products = [
     {
