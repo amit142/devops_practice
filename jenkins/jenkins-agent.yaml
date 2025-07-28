@@ -1,0 +1,63 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-agent
+  namespace: jenkins
+  labels:
+    app: jenkins-agent
+spec:
+  replicas: 2  # Run 2 persistent agents
+  selector:
+    matchLabels:
+      app: jenkins-agent
+  template:
+    metadata:
+      labels:
+        app: jenkins-agent
+    spec:
+      serviceAccountName: jenkins
+      containers:
+      - name: jenkins-agent
+        image: jenkins/inbound-agent:latest
+        env:
+        - name: JENKINS_URL
+          value: "http://jenkins:8080"
+        - name: JENKINS_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-agent-secret
+              key: secret
+        - name: JENKINS_AGENT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: JENKINS_AGENT_WORKDIR
+          value: "/home/jenkins/agent"
+        volumeMounts:
+        - name: docker-sock
+          mountPath: /var/run/docker.sock
+        - name: workspace
+          mountPath: /home/jenkins/agent
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: docker-sock
+        hostPath:
+          path: /var/run/docker.sock
+      - name: workspace
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jenkins-agent-secret
+  namespace: jenkins
+type: Opaque
+data:
+  secret: <base64-encoded-agent-secret>  # You'll need to get this from Jenkins UI

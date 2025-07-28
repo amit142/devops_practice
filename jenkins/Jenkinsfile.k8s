@@ -1,0 +1,174 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: docker
+    image: docker:dind
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command:
+    - sleep
+    args:
+    - 99d
+  - name: helm
+    image: alpine/helm:latest
+    command:
+    - sleep
+    args:
+    - 99d
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+"""
+        }
+    }
+    
+    environment {
+        DOCKER_REGISTRY = "your-registry.com"
+        KUBECONFIG = "/tmp/kubeconfig"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/your-repo/microservices-app.git'
+            }
+        }
+        
+        stage('Build Images') {
+            parallel {
+                stage('User Service') {
+                    steps {
+                        container('docker') {
+                            script {
+                                sh '''
+                                    cd user-service
+                                    docker build -t user-service:${BUILD_NUMBER} .
+                                    docker tag user-service:${BUILD_NUMBER} user-service:latest
+                                '''
+                            }
+                        }
+                    }
+                }
+                stage('Product Service') {
+                    steps {
+                        container('docker') {
+                            script {
+                                sh '''
+                                    cd product-service
+                                    docker build -t product-service:${BUILD_NUMBER} .
+                                    docker tag product-service:${BUILD_NUMBER} product-service:latest
+                                '''
+                            }
+                        }
+                    }
+                }
+                stage('Order Service') {
+                    steps {
+                        container('docker') {
+                            script {
+                                sh '''
+                                    cd order-service
+                                    docker build -t order-service:${BUILD_NUMBER} .
+                                    docker tag order-service:${BUILD_NUMBER} order-service:latest
+                                '''
+                            }
+                        }
+                    }
+                }
+                stage('Web UI') {
+                    steps {
+                        container('docker') {
+                            script {
+                                sh '''
+                                    cd web-ui
+                                    docker build -t web-ui:${BUILD_NUMBER} .
+                                    docker tag web-ui:${BUILD_NUMBER} web-ui:latest
+                                '''
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Load Images to Minikube') {
+            steps {
+                container('docker') {
+                    script {
+                        sh '''
+                            # Load images into minikube
+                            minikube image load user-service:${BUILD_NUMBER}
+                            minikube image load product-service:${BUILD_NUMBER}
+                            minikube image load order-service:${BUILD_NUMBER}
+                            minikube image load web-ui:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy with Helm') {
+            steps {
+                container('helm') {
+                    script {
+                        sh '''
+                            # Update image tags in values
+                            helm upgrade --install microservices-${BRANCH_NAME} ./helm/microservices-chart/ \
+                                --set userService.image.tag=${BUILD_NUMBER} \
+                                --set productService.image.tag=${BUILD_NUMBER} \
+                                --set orderService.image.tag=${BUILD_NUMBER} \
+                                --set webUI.image.tag=${BUILD_NUMBER} \
+                                --namespace ecommerce-${BRANCH_NAME} \
+                                --create-namespace
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                container('kubectl') {
+                    script {
+                        sh '''
+                            # Wait for deployment
+                            kubectl wait --for=condition=available --timeout=300s deployment --all -n ecommerce-${BRANCH_NAME}
+                            
+                            # Run health checks
+                            kubectl get pods -n ecommerce-${BRANCH_NAME}
+                            
+                            # Test services
+                            kubectl run test-pod --image=busybox -i --rm --restart=Never -n ecommerce-${BRANCH_NAME} -- \
+                                sh -c "wget -qO- http://user-service:3001/health && \
+                                       wget -qO- http://product-service:3002/health && \
+                                       wget -qO- http://order-service:3003/orders/health"
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline completed!'
+        }
+        success {
+            echo 'Deployment successful!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}

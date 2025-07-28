@@ -1,0 +1,54 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description>Test freestyle project to demonstrate dynamic Kubernetes agents</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>freestyle-agent</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>#!/bin/bash
+
+echo "🚀 Freestyle Project - Dynamic Agent Test"
+echo "=========================================="
+
+echo "📋 Build Information:"
+echo "  Job Name: $JOB_NAME"
+echo "  Build Number: $BUILD_NUMBER"
+echo "  Node Name: $NODE_NAME"
+echo "  Workspace: $WORKSPACE"
+
+echo ""
+echo "🖥️  System Information:"
+echo "  Hostname: $(hostname)"
+echo "  Current User: $(whoami)"
+echo "  Current Directory: $(pwd)"
+
+echo ""
+echo "💾 Resource Information:"
+echo "  Memory Info:"
+cat /proc/meminfo | head -3
+
+echo ""
+echo "⏱️  Test Duration:"
+for i in {1..3}; do
+    echo "  Step $i/3: Processing..."
+    sleep 3
+    echo "    - Current time: $(date)"
+done
+
+echo ""
+echo "✅ Freestyle test completed!"
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

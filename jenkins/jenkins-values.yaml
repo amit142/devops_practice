@@ -1,0 +1,114 @@
+# Jenkins Helm Chart Values
+controller:
+  # Jenkins admin user
+  adminUser: "admin"
+  adminPassword: "admin123"
+  
+  # Resource limits
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "256Mi"
+    limits:
+      cpu: "2000m"
+      memory: "4096Mi"
+  
+  # Service configuration
+  serviceType: NodePort
+  nodePort: 32000
+  
+  # Enable ingress
+  ingress:
+    enabled: true
+    hostName: jenkins.local
+    annotations:
+      kubernetes.io/ingress.class: nginx
+  
+  # Install plugins
+  installPlugins:
+    - kubernetes:4246.v5a_12b_1fe120e
+    - workflow-aggregator:596.v8c21c963d92d
+    - git:5.2.1
+    - configuration-as-code:1810.v9b_c30a_249a_4c
+    - blueocean:1.27.8
+    - docker-workflow:580.vc0c340686b_54
+    - pipeline-stage-view:2.34
+    - build-timeout:1.31
+    - credentials-binding:681.vf91669a_32e45
+    - timestamper:1.26
+    - ws-cleanup:0.45
+    - ant:475.vf34069fef73c
+    - gradle:2.12
+    - workflow-support:907.v6713a_ed8a_573
+    - pipeline-milestone-step:119.vdfdc43fc3b_9a_
+    - matrix-project:822.824.v14451b_c0fd42
+    - build-pipeline-plugin:1.5.8
+    - conditional-buildstep:1.4.3
+    - jenkins-multijob-plugin:1.37
+    - parameterized-trigger:2.47
+    - copyartifact:722.v0662a_9b_e22a_c
+  
+  # JCasC configuration
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      welcome-message: |
+        jenkins:
+          systemMessage: "Welcome to Jenkins for Microservices CI/CD!"
+        
+        unclassified:
+          location:
+            url: "http://jenkins.local:32000"
+            adminAddress: "admin@jenkins.local"
+  
+  # Persistent volume
+  persistence:
+    enabled: true
+    size: "8Gi"
+    storageClass: "standard"
+
+# Agent configuration for dynamic pods
+agent:
+  enabled: true
+  resources:
+    requests:
+      cpu: "512m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1024Mi"
+  
+  # Pod templates for different build types
+  podTemplates:
+    docker: |
+      - name: docker
+        label: docker
+        serviceAccount: jenkins
+        containers:
+        - name: docker
+          image: docker:dind
+          privileged: true
+          command: ["dockerd-entrypoint.sh"]
+        - name: kubectl
+          image: bitnami/kubectl:latest
+          command: ["sleep"]
+          args: ["99d"]
+
+# Service Account with proper permissions
+serviceAccount:
+  create: true
+  name: jenkins
+  annotations: {}
+
+# RBAC permissions
+rbac:
+  create: true
+  readSecrets: true
+
+# Network Policy
+networkPolicy:
+  enabled: false
+
+# Backup configuration
+backup:
+  enabled: false

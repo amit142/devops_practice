@@ -1,0 +1,87 @@
+// Development Environment Pipeline
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_REGISTRY = 'localhost:5000'
+        IMAGE_TAG = "dev-${BUILD_NUMBER}"
+        NAMESPACE = 'ecommerce-dev'
+        DEPLOY_ENV = 'development'
+    }
+    
+    parameters {
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip running tests')
+        booleanParam(name: 'FORCE_REBUILD', defaultValue: false, description: 'Force rebuild all images')
+    }
+    
+    stages {
+        stage('Quick Build & Deploy') {
+            parallel {
+                stage('Build Services') {
+                    steps {
+                        script {
+                            if (params.FORCE_REBUILD || env.GIT_COMMIT != env.PREVIOUS_COMMIT) {
+                                echo "🔄 Building all services for development..."
+                                
+                                // Fast builds without extensive testing
+                                sh """
+                                    docker build -t user-service:${IMAGE_TAG} ./user-service/
+                                    docker build -t product-service:${IMAGE_TAG} ./product-service/
+                                    docker build -t order-service:${IMAGE_TAG} ./order-service/
+                                    docker build -t web-ui:${IMAGE_TAG} ./web-ui/
+                                """
+                            } else {
+                                echo "📦 No changes detected, using cached images"
+                            }
+                        }
+                    }
+                }
+                
+                stage('Quick Tests') {
+                    when {
+                        not { params.SKIP_TESTS }
+                    }
+                    steps {
+                        echo "🧪 Running quick tests..."
+                        sh """
+                            # Run only unit tests, skip integration tests
+                            cd user-service && npm test --passWithNoTests || true
+                            cd ../product-service && python -m pytest --tb=short || true
+                            cd ../order-service && mvn test -q || true
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Dev') {
+            steps {
+                echo "🚀 Deploying to development environment..."
+                sh """
+                    # Update dev namespace manifests
+                    sed -i 's|namespace: ecommerce|namespace: ${NAMESPACE}|g' k8s/*.yaml
+                    sed -i 's|:latest|:${IMAGE_TAG}|g' k8s/*.yaml
+                    
+                    # Create namespace if not exists
+                    kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+                    
+                    # Deploy
+                    kubectl apply -f k8s/ -n ${NAMESPACE}
+                    
+                    # Quick health check
+                    sleep 15
+                    kubectl get pods -n ${NAMESPACE}
+                """
+            }
+        }
+    }
+    
+    post {
+        always {
+            sh 'docker system prune -f || true'
+        }
+        success {
+            echo "✅ Dev deployment successful! Access at: http://localhost:30800"
+        }
+    }
+}
