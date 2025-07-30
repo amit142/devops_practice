@@ -1,0 +1,56 @@
+{{- if .Values.productService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.productService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.productService.name }}
+spec:
+  replicas: {{ .Values.productService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.productService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.productService.name }}
+    spec:
+      containers:
+      - name: {{ .Values.productService.name }}
+        image: "{{ .Values.global.imageRegistry }}{{ .Values.productService.image.repository }}:{{ .Values.productService.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.productService.service.port }}
+        env:
+        - name: PORT
+          value: {{ .Values.productService.service.port | quote }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.productService.service.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.productService.service.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.productService.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.productService.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: {{ .Values.productService.name }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.productService.service.port }}
+      targetPort: {{ .Values.productService.service.port }}
+  type: {{ .Values.productService.service.type }}
+{{- end }}

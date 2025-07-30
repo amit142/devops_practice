@@ -1,0 +1,99 @@
+# Default values for microservices-chart
+global:
+  namespace: ecommerce
+  imageRegistry: ""
+  imagePullPolicy: Never
+
+# User Service Configuration
+userService:
+  enabled: true
+  name: user-service
+  image:
+    repository: user-service
+    tag: latest
+  service:
+    port: 3001
+    type: ClusterIP
+  replicas: 2
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Product Service Configuration  
+productService:
+  enabled: true
+  name: product-service
+  image:
+    repository: product-service
+    tag: latest
+  service:
+    port: 3002
+    type: ClusterIP
+  replicas: 2
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Order Service Configuration
+orderService:
+  enabled: true
+  name: order-service
+  image:
+    repository: order-service
+    tag: latest
+  service:
+    port: 3003
+    type: ClusterIP
+  replicas: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+# Web UI Configuration
+webUI:
+  enabled: true
+  name: web-ui
+  image:
+    repository: web-ui
+    tag: latest
+  service:
+    port: 8000
+    type: LoadBalancer
+    nodePort: 30800
+  replicas: 2
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx
+  host: ecommerce.local
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization"
+
+# ConfigMap for service URLs
+config:
+  userServiceUrl: "http://user-service.ecommerce.svc.cluster.local:3001"
+  productServiceUrl: "http://product-service.ecommerce.svc.cluster.local:3002"
+  orderServiceUrl: "http://order-service.ecommerce.svc.cluster.local:3003"

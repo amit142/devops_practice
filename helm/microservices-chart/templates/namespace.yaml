@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace }}
+  labels:
+    name: {{ .Values.global.namespace }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  USER_SERVICE_URL: {{ .Values.config.userServiceUrl | quote }}
+  PRODUCT_SERVICE_URL: {{ .Values.config.productServiceUrl | quote }}
+  ORDER_SERVICE_URL: {{ .Values.config.orderServiceUrl | quote }}

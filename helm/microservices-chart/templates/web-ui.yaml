@@ -1,0 +1,76 @@
+{{- if .Values.webUI.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.webUI.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.webUI.name }}
+spec:
+  replicas: {{ .Values.webUI.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.webUI.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.webUI.name }}
+    spec:
+      containers:
+      - name: {{ .Values.webUI.name }}
+        image: "{{ .Values.global.imageRegistry }}{{ .Values.webUI.image.repository }}:{{ .Values.webUI.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.webUI.service.port }}
+        env:
+        - name: PORT
+          value: {{ .Values.webUI.service.port | quote }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.webUI.service.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.webUI.service.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.webUI.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.webUI.name }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: {{ .Values.webUI.name }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.webUI.service.port }}
+      targetPort: {{ .Values.webUI.service.port }}
+      {{- if eq .Values.webUI.service.type "NodePort" }}
+      nodePort: {{ .Values.webUI.service.nodePort }}
+      {{- end }}
+  type: {{ .Values.webUI.service.type }}
+{{- if eq .Values.webUI.service.type "LoadBalancer" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.webUI.name }}-nodeport
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: {{ .Values.webUI.name }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.webUI.service.port }}
+      targetPort: {{ .Values.webUI.service.port }}
+      nodePort: {{ .Values.webUI.service.nodePort }}
+  type: NodePort
+{{- end }}
+{{- end }}
